@@ -3,12 +3,15 @@ import { makePing } from '../../../../lib/make'
 import { logWebhook } from '../../../../lib/logger'
 
 export async function GET() {
-  const token = process.env.MAKE_API_TOKEN as string
+  const token =
+    (process.env.MAKE_API_TOKEN as string) ||
+    (process.env.MAKE_API_TOKEN_PRIMARY as string) ||
+    (process.env.MAKE_API_TOKEN_BACKUP as string)
   if (!token) {
     await logWebhook({
       route: '/api/make/ping',
       status: 'invalid',
-      error: 'missing MAKE_API_TOKEN',
+      error: 'missing MAKE_API_TOKEN or PRIMARY/BACKUP',
       payload: null,
     })
     return NextResponse.json({ error: 'server_misconfigured' }, { status: 500 })
