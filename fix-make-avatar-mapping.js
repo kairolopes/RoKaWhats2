@@ -24,44 +24,28 @@ async function updateScenario() {
   const blueprint = (await getRes.json()).response.blueprint;
 
   // 2. Modificar Módulo 4 (Avatar Sync)
-  // O módulo 4 é o que envia para /api/inbox/avatar/sync
   const avatarSyncModule = blueprint.flow.find(m => m.id === 4);
   
   if (avatarSyncModule) {
-    console.log('Atualizando mapeamento do Módulo 4...');
-    
-    // O JSON atual está com "avatarUrl": ""
-    // Vamos substituir por "avatarUrl": "{{5.data.link}}"
-    // Assumindo que o módulo 5 retorna { link: "..." } (padrão Z-API profile-picture)
-    
-    // Parse do JSON string dentro de 'data'
-    // CUIDADO: O Make usa placeholders {{...}} que podem quebrar JSON.parse se não tratados.
-    // Mas aqui queremos apenas substituir a string dentro do valor.
+    console.log('Atualizando mapeamento do Módulo 4 para usar apenas imgUrl...');
     
     let jsonData = avatarSyncModule.mapper.data;
     
-    // Substituição segura via regex ou string replace
-    // Procura "avatarUrl": "" e troca por "avatarUrl": "{{5.data.link}}"
-    // Se o endpoint for /contacts, seria {{5.data.imgUrl}}. 
-    // Vamos usar fallback: {{ifempty(5.data.link; 5.data.imgUrl)}}
+    // Simplificando diretamente para imgUrl conforme solicitado
+    const newAvatarValue = "{{5.data.imgUrl}}";
     
-    const newAvatarValue = "{{ifempty(5.data.link; 5.data.imgUrl)}}";
+    // Regex para substituir qualquer valor anterior de avatarUrl
+    // Procura "avatarUrl": "..." (com qualquer conteúdo dentro das aspas)
+    // E substitui por "avatarUrl": "{{5.data.imgUrl}}"
     
-    if (jsonData.includes('"avatarUrl": ""')) {
-        jsonData = jsonData.replace('"avatarUrl": ""', `"avatarUrl": "${newAvatarValue}"`);
-    } else {
-        // Se já tiver algo, vamos forçar a substituição
-        // Regex para "avatarUrl": "..."
+    if (jsonData.includes('"avatarUrl"')) {
         jsonData = jsonData.replace(/"avatarUrl":\s*"[^"]*"/, `"avatarUrl": "${newAvatarValue}"`);
+    } else {
+        // Se não existir, insere (embora deva existir)
+        console.log('Campo avatarUrl não encontrado, verifique o JSON manual.');
     }
     
     avatarSyncModule.mapper.data = jsonData;
-    
-    // Remover chave solta incorreta se existir
-    if (avatarSyncModule.mapper.avatarUrl) {
-        delete avatarSyncModule.mapper.avatarUrl;
-    }
-
     console.log('Novo payload data:', jsonData);
   } else {
       console.error('Módulo 4 não encontrado!');
@@ -82,7 +66,7 @@ async function updateScenario() {
   if (!updateRes.ok) {
       console.error('Erro ao atualizar:', await updateRes.text());
   } else {
-      console.log('Cenário atualizado com sucesso!');
+      console.log('Fórmula atualizada com sucesso!');
   }
 }
 
