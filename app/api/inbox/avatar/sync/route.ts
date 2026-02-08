@@ -135,9 +135,9 @@ export async function POST(req: Request) {
             const idx = base.indexOf('/contacts')
             if (idx > -1) {
               const root = base.slice(0, idx + '/contacts'.length)
+              // Z-API documentation confirms query param is the correct format
               const urlQuery = `${root}/profile-picture?phone=${contactPhone}`
-              const urlPath = `${root}/${contactPhone}/profile-picture`
-              const candidates = [urlQuery, urlPath]
+              const candidates = [urlQuery]
               for (const candidate of candidates) {
                 let r = await fetch(candidate, { headers })
                 if (!r.ok && clientToken) {
