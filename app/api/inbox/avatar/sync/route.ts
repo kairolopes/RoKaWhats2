@@ -3,13 +3,24 @@ import { logWebhook } from '../../../../../lib/logger'
 import { ensureBuckets, uploadToSupabaseStorage } from '../../../../../lib/storage'
 import { createClient } from '@supabase/supabase-js'
 
+// Removed fs usage to avoid potential build issues in Next.js App Router
+// Using console.log which should appear in server stdout
+
+function debugLog(msg: string) {
+  console.log(`[AVATAR_DEBUG] ${msg}`);
+}
+
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => ({}))
-  const workspaceId = body?.workspaceId as string | undefined
-  const contactPhone = body?.contactPhone as string | undefined
-  const avatarUrl = body?.avatarUrl as string | undefined
-  const secret = req.headers.get('x-make-secret')
-  if (!secret || secret !== process.env.MAKE_WEBHOOK_SECRET) {
+  try {
+    debugLog('Received request');
+    const body = await req.json().catch(() => ({}))
+    debugLog(`Payload: ${JSON.stringify(body)}`);
+    const workspaceId = body?.workspaceId as string | undefined
+    const contactPhone = body?.contactPhone as string | undefined
+    // Accept avatarUrl (standard) or senderPhoto (Z-API webhook direct mapping)
+    const avatarUrl = (body?.avatarUrl || body?.senderPhoto) as string | undefined
+    const secret = req.headers.get('x-make-secret')
+    if (!secret || secret !== process.env.MAKE_WEBHOOK_SECRET) {
     await logWebhook({
       workspaceId,
       route: '/api/inbox/avatar/sync',
@@ -30,7 +41,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'missing_fields' }, { status: 400 })
   }
 
-  await ensureBuckets()
+  try {
+    debugLog('Calling ensureBuckets');
+    await ensureBuckets()
+    debugLog('ensureBuckets done');
+  } catch (e: any) {
+    debugLog(`ensureBuckets failed: ${e.message}`);
+    return NextResponse.json({ error: 'storage_error', details: e.message }, { status: 500 });
+  }
 
   let buffer: Buffer | null = null
   let contentType = 'image/jpeg'
@@ -177,6 +195,7 @@ export async function POST(req: Request) {
 
   const path = `avatars/${workspaceId}/contacts/${contactPhone}.jpg`
   try {
+    debugLog(`Uploading to ${path}`);
     const upload = await uploadToSupabaseStorage({
       bucket: 'avatars',
       path,
@@ -185,6 +204,7 @@ export async function POST(req: Request) {
       upsert: true,
       signedSeconds: 600,
     })
+    debugLog(`Upload success: ${JSON.stringify(upload)}`);
     const admin = createClient(
       process.env.SUPABASE_URL as string,
       process.env.SUPABASE_SERVICE_ROLE_KEY as string
@@ -214,15 +234,24 @@ export async function POST(req: Request) {
       error: null,
       payload: { contactPhone, path, contactId },
     })
-    return NextResponse.json({ ok: true, path: upload.path, signedUrl: upload.signedUrl })
+    return NextResponse.json({ ok: true, url: upload.signedUrl })
   } catch (e: any) {
+    debugLog(`Final catch: ${e.message}`);
     await logWebhook({
       workspaceId,
       route: '/api/inbox/avatar/sync',
       status: 'error',
-      error: e?.message || 'store_error',
-      payload: { contactPhone, path },
+      error: e?.message || 'upload_failed',
+      payload: { contactPhone },
     })
-    return NextResponse.json({ error: 'store_error' }, { status: 500 })
+    return NextResponse.json({ error: 'upload_failed', details: e.message }, { status: 500 })
+  }
+} catch (fatal: any) {
+    console.error('FATAL ERROR in avatar sync:', fatal);
+    return NextResponse.json({ 
+      error: 'fatal_error', 
+      message: fatal.message, 
+      stack: fatal.stack 
+    }, { status: 500 });
   }
 }
