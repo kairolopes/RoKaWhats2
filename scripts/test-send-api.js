@@ -3,11 +3,11 @@
 // Node 18+ has built-in fetch, so we might not need require('node-fetch')
 
 async function testSendApi() {
-  const url = 'https://rokawhats2.onrender.com/api/inbox/send';
+  const url = 'http://localhost:3000/api/inbox/send';
   const payload = {
     workspaceId: '6228cbce-c983-43c1-b2e8-f2dd647dc0ff',
     to: {
-      phone: '5562985635204'
+      phone: '5511999999999'
     },
     message: {
       type: 'text',

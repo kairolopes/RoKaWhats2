@@ -209,15 +209,37 @@ export async function POST(req: Request) {
       process.env.SUPABASE_URL as string,
       process.env.SUPABASE_SERVICE_ROLE_KEY as string
     )
+    
+    let contactId: string | null = null
+
+    // Normalize phone for lookup (check both 8 and 9 digits)
+    const cleanPhone = contactPhone.replace(/\D/g, '')
+    let possiblePhones = [cleanPhone]
+    
+    if (cleanPhone.startsWith('55') && (cleanPhone.length === 12 || cleanPhone.length === 13)) {
+        const base = cleanPhone.substring(2) // Remove 55
+        const ddd = base.substring(0, 2)
+        const number = base.substring(2)
+        
+        if (number.length === 8) {
+            // Add 9
+            possiblePhones.push(`55${ddd}9${number}`)
+        } else if (number.length === 9 && number.startsWith('9')) {
+            // Remove 9
+            possiblePhones.push(`55${ddd}${number.substring(1)}`)
+        }
+    }
+
     const { data: existing } = await admin
       .from('contacts')
-      .select('id')
+      .select('id, phone')
       .eq('workspace_id', workspaceId)
-      .eq('phone', contactPhone)
+      .in('phone', possiblePhones)
       .limit(1)
-    let contactId: string | null = null
+
     if (existing && existing.length > 0) {
       contactId = existing[0].id
+      // Update with the correct path
       await admin.from('contacts').update({ profile_pic_url: path }).eq('id', contactId)
     } else {
       const { data: inserted } = await admin
