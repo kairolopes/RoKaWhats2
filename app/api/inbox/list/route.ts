@@ -13,17 +13,15 @@ export async function GET() {
   try {
     // Fetch conversations (limit 50 for performance)
     const { data: convs, error } = await admin
-      .from('conversations')
-      .select(`
-        id,
-        created_at,
-        updated_at,
-        last_message_at,
-        unread_count,
-        workspace_id,
-        contact_id,
-        contacts (
-          id,
+              .from('conversations')
+              .select(`
+                id,
+                created_at,
+                last_message_at,
+                workspace_id,
+                contact_id,
+                contacts (
+                  id,
           name,
           phone,
           profile_pic_url
@@ -59,7 +57,7 @@ export async function GET() {
             avatar_url: c.contacts?.profile_pic_url,
             last_message: lastMsgContent, // Now populated correctly
             last_message_at: c.last_message_at || c.created_at,
-            unread_count: c.unread_count || 0,
+            unread_count: 0,
             workspace_id: c.workspace_id
         }
     }))
