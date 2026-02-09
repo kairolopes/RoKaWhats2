@@ -1,9 +1,31 @@
 import { NextResponse } from 'next/server'
 import { logWebhook } from '../../../../lib/logger'
+import { persistMessage } from '../../../../lib/inbox'
+import { createClient } from '@supabase/supabase-js'
 
 export async function POST(req: Request) {
   const body = await req.json()
   const workspaceId = body?.workspaceId as string | undefined
+  const phone = body?.to?.phone as string | undefined
+  const text = body?.message?.text as string | undefined
+  const externalMessageId = body?.externalMessageId as string | undefined
+
+  // Persist Outbound Message
+  if (workspaceId && phone && text) {
+     const supabase = createClient(
+      process.env.SUPABASE_URL as string,
+      process.env.SUPABASE_SERVICE_ROLE_KEY as string
+    )
+    
+    await persistMessage(supabase, {
+      workspaceId,
+      phone,
+      text,
+      direction: 'out',
+      status: 'sent',
+      externalMessageId
+    })
+  }
 
   const url = process.env.MAKE_OUTBOX_WEBHOOK_URL as string
   if (!url) {

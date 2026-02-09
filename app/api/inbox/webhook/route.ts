@@ -1,6 +1,8 @@
+
 import { NextResponse } from 'next/server'
 import { logWebhook } from '../../../../lib/logger'
 import { createClient } from '@supabase/supabase-js'
+import { persistMessage } from '../../../../lib/inbox'
 
 export async function POST(req: Request) {
   const secret = req.headers.get('x-make-secret')
@@ -75,5 +77,38 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'log_failed' }, { status: 500 })
   }
 
+  // --- PERSIST TO MESSAGES TABLE ---
+  if (workspaceId && body.message?.text && phone) {
+    // Note: Z-API Inbound format might differ from Outbox format.
+    // We expect 'phone' (sender) to be present.
+    
+    // Attempt to persist
+    const supabase = createClient(
+      process.env.SUPABASE_URL as string,
+      process.env.SUPABASE_SERVICE_ROLE_KEY as string
+    )
+    
+    const result = await persistMessage(supabase, {
+      workspaceId,
+      phone,
+      text: body.message.text,
+      direction: 'in',
+      status: 'received',
+      externalMessageId
+    })
+    
+    if (result.error) {
+       console.error('Persistence failed:', result.error)
+       // We don't fail the webhook response, just log
+       await logWebhook({
+        workspaceId,
+        route: '/api/inbox/webhook',
+        status: 'persistence_failed',
+        error: result.error,
+        payload: body,
+      })
+    }
+  }
+  
   return NextResponse.json({ ok: true })
 }
