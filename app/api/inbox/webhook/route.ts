@@ -75,7 +75,7 @@ export async function POST(req: Request) {
     externalMessageId,
     status: 'received',
     error: null,
-    payload: body,
+    payload: { ...body, DEBUG_MARKER: 'v2_active' },
   })
 
   if (logErr) {
@@ -108,10 +108,36 @@ export async function POST(req: Request) {
     text = `Contact: ${messageData.contactName} ${messageData.contactPhone ? `(${messageData.contactPhone})` : ''}`
   }
 
-  if (workspaceId && (text || mediaUrl) && phone) {
+  // DEBUG: FORCE LOGGING OF VARIABLES
+  await logWebhook({
+      workspaceId,
+      route: '/api/inbox/webhook/vars',
+      status: 'debug_vars',
+      error: null,
+      payload: { 
+          workspaceId, 
+          phone, 
+          text, 
+          mediaUrl, 
+          hasWorkspace: !!workspaceId,
+          hasPhone: !!phone,
+          hasContent: !!(text || mediaUrl)
+      }
+  })
+
+  if (workspaceId && phone) { // SIMPLIFIED CHECK: Removed content check for now to force entry
     // Note: Z-API Inbound format might differ from Outbox format.
     // We expect 'phone' (sender) to be present.
     
+    // DEBUG: Confirm we are entering the block
+    await logWebhook({
+        workspaceId,
+        route: '/api/inbox/webhook/debug_pre_persist',
+        status: 'about_to_persist',
+        error: null,
+        payload: { phone, text, mediaUrl }
+    })
+
     // Attempt to persist
     const supabase = createClient(
       process.env.SUPABASE_URL as string,

@@ -1,6 +1,18 @@
 
 import { SupabaseClient } from '@supabase/supabase-js'
 
+async function logPersist(s: SupabaseClient, msg: string, data?: any) {
+    try {
+        await s.from('webhook_logs').insert({
+            route: 'DEBUG:persistMessage',
+            payload: { msg, data },
+            created_at: new Date().toISOString()
+        });
+    } catch (e) {
+        console.error('Failed to log persist debug:', e);
+    }
+}
+
 export async function persistMessage(s: SupabaseClient, params: {
   workspaceId: string
   phone: string
@@ -13,6 +25,8 @@ export async function persistMessage(s: SupabaseClient, params: {
   mediaUrl?: string
   externalMessageId?: string
 }) {
+  await logPersist(s, `Starting persistMessage`, params);
+
   // 1. Get or Create Contact
   let contactId: string | null = null
   
@@ -35,17 +49,24 @@ export async function persistMessage(s: SupabaseClient, params: {
       }
   }
 
-  const { data: contacts } = await s
+  await logPersist(s, `Searching contacts`, { possiblePhones });
+
+  const { data: contacts, error: contactError } = await s
     .from('contacts')
     .select('id, name, profile_pic_url, phone')
     .eq('workspace_id', params.workspaceId)
     .in('phone', possiblePhones)
     .limit(1)
 
+  if (contactError) {
+      await logPersist(s, `Contact search error`, contactError);
+  }
+
   const contact = contacts && contacts.length > 0 ? contacts[0] : null
 
   if (contact) {
     contactId = contact.id
+    await logPersist(s, `Found existing contact`, { contactId });
     // Optional: Update name/avatar if missing or changed
     if (params.contactName || params.contactAvatar) {
         const updates: any = {}
@@ -57,6 +78,7 @@ export async function persistMessage(s: SupabaseClient, params: {
         }
     }
   } else {
+    await logPersist(s, `Creating new contact`, { phone: params.phone });
     const { data: newContact, error: createContactErr } = await s
       .from('contacts')
       .insert({
@@ -70,25 +92,33 @@ export async function persistMessage(s: SupabaseClient, params: {
       .single()
     
     if (createContactErr) {
+      await logPersist(s, `Error creating contact`, createContactErr);
       return { error: `contact_create_failed: ${createContactErr.message}` }
     }
     contactId = newContact.id
+    await logPersist(s, `Created new contact`, { contactId });
   }
 
   // 2. Get or Create Conversation
   let conversationId: string | null = null
-  const { data: conv } = await s
+  const { data: conv, error: convErr } = await s
     .from('conversations')
     .select('id')
     .eq('workspace_id', params.workspaceId)
     .eq('contact_id', contactId)
     .single()
+  
+  if (convErr && convErr.code !== 'PGRST116') {
+      await logPersist(s, `Conversation search error`, convErr);
+  }
 
   if (conv) {
     conversationId = conv.id
+    await logPersist(s, `Found existing conversation`, { conversationId });
     // Update last_message_at
     await s.from('conversations').update({ last_message_at: new Date().toISOString() }).eq('id', conversationId)
   } else {
+    await logPersist(s, `Creating new conversation`, { contactId });
     const { data: newConv, error: createConvErr } = await s
       .from('conversations')
       .insert({
@@ -102,9 +132,11 @@ export async function persistMessage(s: SupabaseClient, params: {
       .single()
 
     if (createConvErr) {
+      await logPersist(s, `Error creating conversation`, createConvErr);
       return { error: `conversation_create_failed: ${createConvErr.message}` }
     }
     conversationId = newConv.id
+    await logPersist(s, `Created new conversation`, { conversationId });
   }
 
   // 3. Insert Message
@@ -114,6 +146,8 @@ export async function persistMessage(s: SupabaseClient, params: {
   if (params.mediaUrl) {
     finalContent = params.text ? `${params.mediaUrl}\n${params.text}` : params.mediaUrl
   }
+
+  await logPersist(s, `Inserting message`, { conversationId, finalContent });
 
   const { data: msg, error: msgErr } = await s
     .from('messages')
@@ -130,8 +164,10 @@ export async function persistMessage(s: SupabaseClient, params: {
     .single()
 
   if (msgErr) {
+    await logPersist(s, `Error inserting message`, msgErr);
     return { error: `message_insert_failed: ${msgErr.message}` }
   }
 
+  await logPersist(s, `Message persisted successfully`, { id: msg.id });
   return { ok: true, messageId: msg.id, conversationId, contactId }
 }

@@ -29,15 +29,15 @@ async function checkRecentMessages() {
     } else {
       console.log(`Found ${messages.length} messages:`);
       messages.forEach(m => {
-        console.log(`ID: ${m.id}`);
-        console.log(`Created: ${m.created_at}`);
-        console.log(`Content: "${m.content}"`);
-        console.log(`Direction: ${m.direction}`);
-        console.log(`Status: ${m.status}`);
-        console.log(`ExtID: ${m.external_message_id}`);
-        console.log(`Workspace: ${m.workspace_id}`);
-        console.log('---');
-      });
+            console.log(`ID: ${m.id}`);
+            console.log(`Created: ${m.created_at}`);
+            console.log(`Content: "${m.content}"`);
+            console.log(`Direction: ${m.direction}`);
+            console.log(`Status: ${m.status}`);
+            console.log(`ExtID: ${m.external_message_id}`);
+            console.log(`Workspace: ${m.workspace_id}`);
+            console.log('---');
+          });
     }
   }
 }
