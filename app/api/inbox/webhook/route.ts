@@ -103,15 +103,17 @@ export async function POST(req: Request) {
     )
     
     const result = await persistMessage(supabase, {
-      workspaceId,
-      phone,
-      text: text || '',
-      mediaUrl,
-      type,
-      direction: 'in',
-      status: 'received',
-      externalMessageId
-    })
+              workspaceId,
+              phone,
+              contactName,
+              contactAvatar,
+              text: text || '',
+              mediaUrl,
+              type,
+              direction: 'in',
+              status: 'received',
+              externalMessageId
+            })
     
     if (result.error) {
        console.error('Persistence failed:', result.error)

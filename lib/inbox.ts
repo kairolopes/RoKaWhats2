@@ -4,6 +4,8 @@ import { SupabaseClient } from '@supabase/supabase-js'
 export async function persistMessage(s: SupabaseClient, params: {
   workspaceId: string
   phone: string
+  contactName?: string
+  contactAvatar?: string
   text: string
   direction: 'in' | 'out'
   status: string
@@ -15,20 +17,31 @@ export async function persistMessage(s: SupabaseClient, params: {
   let contactId: string | null = null
   const { data: contact } = await s
     .from('contacts')
-    .select('id')
+    .select('id, name, profile_pic_url')
     .eq('workspace_id', params.workspaceId)
     .eq('phone', params.phone)
     .single()
 
   if (contact) {
     contactId = contact.id
+    // Optional: Update name/avatar if missing or changed
+    if (params.contactName || params.contactAvatar) {
+        const updates: any = {}
+        if (params.contactName && contact.name === params.phone) updates.name = params.contactName
+        if (params.contactAvatar && !contact.profile_pic_url) updates.profile_pic_url = params.contactAvatar
+        
+        if (Object.keys(updates).length > 0) {
+            await s.from('contacts').update(updates).eq('id', contactId)
+        }
+    }
   } else {
     const { data: newContact, error: createContactErr } = await s
       .from('contacts')
       .insert({
         workspace_id: params.workspaceId,
         phone: params.phone,
-        name: params.phone, // Default name
+        name: params.contactName || params.phone, // Use provided name or default to phone
+        profile_pic_url: params.contactAvatar || null,
         created_at: new Date().toISOString()
       })
       .select('id')
