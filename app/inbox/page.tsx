@@ -173,7 +173,7 @@ export default function InboxPage() {
   }
 
   const handleSendMessage = async (text: string) => {
-    if (!selectedId || !workspaceId) return
+    if (!selectedId) return // Removed workspaceId check as we get it from conv
 
     const currentConv = conversations.find(c => c.id === selectedId)
     if (!currentConv) return
@@ -183,7 +183,7 @@ export default function InboxPage() {
       const tempMsg = {
         id: 'temp-' + Date.now(),
         conversation_id: selectedId,
-        workspace_id: workspaceId,
+        workspace_id: currentConv.workspace_id,
         content: text,
         direction: 'out',
         status: 'sending',
@@ -197,7 +197,7 @@ export default function InboxPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          workspaceId: workspaceId,
+          workspaceId: currentConv.workspace_id, // Use conversation's workspace_id
           phone: currentConv.contact_phone,
           text: text,
           type: 'text'
