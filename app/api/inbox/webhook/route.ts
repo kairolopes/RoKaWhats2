@@ -26,6 +26,8 @@ export async function POST(req: Request) {
   const workspaceId = body?.workspaceId as string | undefined
   const externalMessageId = body?.externalMessageId as string | undefined
   const phone = body?.phone as string | undefined
+  const contactName = body?.contactName as string | undefined
+  const contactAvatar = body?.contactAvatar as string | undefined
 
   if (!externalMessageId) {
     await logWebhook({
