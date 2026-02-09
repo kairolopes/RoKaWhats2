@@ -81,8 +81,16 @@ export async function POST(req: Request) {
   // --- PERSIST TO MESSAGES TABLE ---
   const messageData = body?.message || {}
   const type = messageData.type || 'text'
-  const text = messageData.text || messageData.caption
-  const mediaUrl = messageData.image || messageData.audio || messageData.video || messageData.document || messageData.mediaUrl
+  
+  let text = messageData.text || messageData.caption
+  const mediaUrl = messageData.image || messageData.audio || messageData.video || messageData.document || messageData.sticker || messageData.mediaUrl
+
+  // Handle special types content generation
+  if (type === 'location' && messageData.latitude && messageData.longitude) {
+    text = `https://maps.google.com/?q=${messageData.latitude},${messageData.longitude}`
+  } else if (type === 'contact' && messageData.contactName) {
+    text = `Contact: ${messageData.contactName} ${messageData.contactPhone ? `(${messageData.contactPhone})` : ''}`
+  }
 
   if (workspaceId && (text || mediaUrl) && phone) {
     // Note: Z-API Inbound format might differ from Outbox format.
