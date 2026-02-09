@@ -46,26 +46,28 @@ export async function POST(req: Request) {
     process.env.SUPABASE_URL as string,
     process.env.SUPABASE_SERVICE_ROLE_KEY as string
   )
-  const { data: existing } = await supabaseAdmin
-    .from('webhook_logs')
+  
+  // Check if message already exists in DB (Deduplication)
+  const { data: existingMessage } = await supabaseAdmin
+    .from('messages')
     .select('id')
-    .eq('route', '/api/inbox/webhook')
     .eq('external_message_id', externalMessageId)
-    .limit(1)
+    .maybeSingle()
 
-  if (existing && existing.length > 0) {
+  if (existingMessage) {
     await logWebhook({
       workspaceId,
       route: '/api/inbox/webhook',
       provider: body?.provider,
       externalMessageId,
-      status: 'duplicate',
+      status: 'duplicate_db',
       error: null,
       payload: body,
     })
     return NextResponse.json({ ok: true, deduped: true })
   }
 
+  // Log receipt
   const logErr = await logWebhook({
     workspaceId,
     route: '/api/inbox/webhook',
