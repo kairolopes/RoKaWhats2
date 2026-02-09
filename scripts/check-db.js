@@ -46,6 +46,7 @@ async function checkMessages() {
   } else {
      logs.forEach(l => {
          console.log(`Log ${l.id}: ${l.route} - ${l.status} (${l.created_at})`);
+         console.log('Payload:', JSON.stringify(l.payload, null, 2));
          if (l.error) console.log(`  Error: ${l.error}`);
      });
   }

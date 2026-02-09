@@ -80,7 +80,19 @@ export async function POST(req: Request) {
 
   // --- PERSIST TO MESSAGES TABLE ---
   const messageData = body?.message || {}
-  const type = messageData.type || 'text'
+  let type = messageData.type || 'text'
+
+  // Fix Z-API "ReceivedCallback" type issue
+  if (type === 'ReceivedCallback') {
+    if (messageData.image) type = 'image'
+    else if (messageData.audio) type = 'audio'
+    else if (messageData.video) type = 'video'
+    else if (messageData.document) type = 'document'
+    else if (messageData.sticker) type = 'sticker'
+    else if (messageData.latitude && messageData.longitude) type = 'location'
+    else if (messageData.contactName) type = 'contact'
+    else type = 'text'
+  }
   
   let text = messageData.text || messageData.caption
   const mediaUrl = messageData.image || messageData.audio || messageData.video || messageData.document || messageData.sticker || messageData.mediaUrl
@@ -103,17 +115,17 @@ export async function POST(req: Request) {
     )
     
     const result = await persistMessage(supabase, {
-              workspaceId,
-              phone,
-              contactName,
-              contactAvatar,
-              text: text || '',
-              mediaUrl,
-              type,
-              direction: 'in',
-              status: 'received',
-              externalMessageId
-            })
+      workspaceId,
+      phone,
+      contactName,
+      contactAvatar,
+      text: text || '',
+      mediaUrl,
+      type,
+      direction: 'in',
+      status: 'delivered', // Changed from 'received' to 'delivered' to match DB constraints
+      externalMessageId
+    })
     
     if (result.error) {
        console.error('Persistence failed:', result.error)
