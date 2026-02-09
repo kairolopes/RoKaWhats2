@@ -87,26 +87,43 @@ export default function InboxPage() {
     }
   }, []) // Dependency array empty -> runs once
 
+  // Polling fallback (every 3s)
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+        if (selectedIdRef.current) {
+            fetchMessages(selectedIdRef.current)
+        }
+        fetchConversations()
+    }, 3000)
+    return () => clearInterval(interval)
+  }, [])
+
   // Fetch messages when selected conversation changes
   React.useEffect(() => {
     if (!selectedId) return
+    fetchMessages(selectedId)
+  }, [selectedId])
 
-    const fetchMessages = async () => {
+  const fetchMessages = async (convId: string) => {
       const { data, error } = await supabase
         .from('messages')
         .select('*')
-        .eq('conversation_id', selectedId)
+        .eq('conversation_id', convId)
         .order('created_at', { ascending: true })
       
       if (error) {
         console.error('Error fetching messages:', error)
       } else {
-        setMessages(data || [])
+        // Merge with current state to avoid flickering?
+        // Simple replace is easier but might reset scroll.
+        // MessageList handles scroll on change.
+        // To avoid scroll jumping, we should only update if length changed or new message.
+        setMessages(prev => {
+            if (JSON.stringify(prev) === JSON.stringify(data)) return prev
+            return data || []
+        })
       }
-    }
-
-    fetchMessages()
-  }, [selectedId])
+  }
 
   const fetchConversations = async () => {
     try {
