@@ -197,10 +197,14 @@ export default function InboxPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          workspaceId: currentConv.workspace_id, // Use conversation's workspace_id
-          phone: currentConv.contact_phone,
-          text: text,
-          type: 'text'
+          workspaceId: currentConv.workspace_id,
+          to: {
+            phone: currentConv.contact_phone
+          },
+          message: {
+            type: 'text',
+            text: text
+          }
         })
       })
 

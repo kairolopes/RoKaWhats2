@@ -1,6 +1,4 @@
 
-// const fetch = require('node-fetch'); // Native fetch in Node 18+
-
 const url = process.env.MAKE_OUTBOX_WEBHOOK_URL;
 const secret = process.env.MAKE_WEBHOOK_SECRET;
 
@@ -12,31 +10,19 @@ if (!url) {
 async function testMake() {
   console.log('Sending test request to Make:', url);
   
-  const payload = {
-    workspaceId: 'TEST_WORKSPACE_ID',
-    phone: '5511999999999',
-    message: { // Trying nested structure based on common Z-API patterns, or maybe flat?
-      // The API sends: { workspaceId, phone, text, type }
-      // Let's send EXACTLY what the API sends first.
-    },
-    // Actually the API sends:
-    /*
-      body: JSON.stringify({
-          workspaceId: workspaceId,
-          phone: currentConv.contact_phone,
-          text: text,
-          type: 'text'
-        })
-    */
-  };
-  
-  // Constructing the EXACT body the API sends
+  // Constructing the CORRECT nested body that matches Make's expectation
   const body = {
     workspaceId: 'TEST_WORKSPACE_ID',
-    phone: '5511999999999',
-    text: 'Teste de envio direto do script de debug Trae',
-    type: 'text'
+    to: {
+      phone: '5511999999999'
+    },
+    message: {
+      type: 'text',
+      text: 'Teste de envio CORRETO do script de debug Trae (nested)'
+    }
   };
+
+  console.log('Payload:', JSON.stringify(body, null, 2));
 
   try {
     const res = await fetch(url, {
