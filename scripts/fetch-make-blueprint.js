@@ -24,18 +24,14 @@ async function fetchBlueprint() {
     const blueprint = await response.json();
     console.log('✅ Blueprint Fetched!');
     
-    // Find Z-API modules (usually HTTP or specific app)
-    const modules = blueprint.response.blueprint.flow;
-    const zapiModules = modules.filter(m => m.module.includes('http') || m.module.includes('z-api'));
-    
-    console.log('\n🔍 Found Modules (potential Z-API):');
-    zapiModules.forEach(m => {
-        console.log(`ID: ${m.id}, Module: ${m.module}`);
-        if (m.parameters) console.log('Parameters:', JSON.stringify(m.parameters, null, 2));
-        // HTTP modules store config in 'parameters' or 'mapper'
-        // Let's print the whole module to be sure
-        console.log(JSON.stringify(m, null, 2));
-    });
+    // Find Module 3
+    const module3 = blueprint.response.blueprint.flow.find(m => m.id === 3);
+    if (!module3) {
+        console.log('❌ Module 3 NOT FOUND');
+    } else {
+        console.log('\n✅ Module 3 Found!');
+        console.dir(module3.mapper, { depth: null });
+    }
 
   } catch (error) {
     console.error('❌ Network Error:', error);

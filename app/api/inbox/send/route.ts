@@ -2,6 +2,17 @@ import { NextResponse } from 'next/server'
 import { logWebhook } from '@/lib/logger'
 import { persistMessage } from '@/lib/inbox'
 import { createClient } from '@supabase/supabase-js'
+import fs from 'fs';
+import path from 'path';
+
+function logToFile(msg: string) {
+  try {
+    const logPath = path.join(process.cwd(), 'debug-route.log');
+    fs.appendFileSync(logPath, new Date().toISOString() + ' ' + msg + '\n');
+  } catch (e) {
+    // ignore
+  }
+}
 
 export async function POST(req: Request) {
   const body = await req.json()
@@ -13,6 +24,8 @@ export async function POST(req: Request) {
   const mediaUrl = messageData.image || messageData.audio || messageData.video || messageData.document
   const externalMessageId = body?.externalMessageId as string | undefined
 
+  logToFile(`Received request: ${JSON.stringify(body)}`);
+
   // Persist Outbound Message
   if (workspaceId && phone && (text || mediaUrl)) {
      const supabase = createClient(
@@ -20,7 +33,7 @@ export async function POST(req: Request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY as string
     )
     
-    await persistMessage(supabase, {
+    const persistResult = await persistMessage(supabase, {
       workspaceId,
       phone,
       text: text || '',
@@ -30,9 +43,27 @@ export async function POST(req: Request) {
       status: 'sent',
       externalMessageId
     })
+
+    if (persistResult.error) {
+       logToFile(`❌ persistMessage failed: ${JSON.stringify(persistResult.error)}`);
+       console.error("❌ persistMessage failed:", persistResult.error);
+       await logWebhook({
+         workspaceId,
+         route: '/api/inbox/send',
+         status: 'persist_error',
+         error: persistResult.error,
+         payload: body
+       });
+    } else {
+       logToFile(`✅ persistMessage success: ${persistResult.messageId}`);
+       console.log("✅ persistMessage success:", persistResult.messageId);
+    }
   }
 
   const url = process.env.MAKE_OUTBOX_WEBHOOK_URL as string
+  logToFile(`📤 Sending to Make URL: ${url}`);
+  console.log("📤 Sending to Make URL:", url); // Log URL for debugging
+
   if (!url) {
     await logWebhook({
       workspaceId,

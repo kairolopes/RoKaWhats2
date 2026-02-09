@@ -15,12 +15,34 @@ export async function persistMessage(s: SupabaseClient, params: {
 }) {
   // 1. Get or Create Contact
   let contactId: string | null = null
-  const { data: contact } = await s
+  
+  // Normalize phone check (Handle Brazil 9th digit)
+  // Check for both 8 and 9 digit versions if it's a BR number
+  const cleanPhone = params.phone.replace(/\D/g, '')
+  let possiblePhones = [params.phone]
+  
+  if (cleanPhone.startsWith('55') && (cleanPhone.length === 12 || cleanPhone.length === 13)) {
+      const base = cleanPhone.substring(2) // Remove 55
+      const ddd = base.substring(0, 2)
+      const number = base.substring(2)
+      
+      if (number.length === 8) {
+          // Add 9
+          possiblePhones.push(`55${ddd}9${number}`)
+      } else if (number.length === 9 && number.startsWith('9')) {
+          // Remove 9
+          possiblePhones.push(`55${ddd}${number.substring(1)}`)
+      }
+  }
+
+  const { data: contacts } = await s
     .from('contacts')
-    .select('id, name, profile_pic_url')
+    .select('id, name, profile_pic_url, phone')
     .eq('workspace_id', params.workspaceId)
-    .eq('phone', params.phone)
-    .single()
+    .in('phone', possiblePhones)
+    .limit(1)
+
+  const contact = contacts && contacts.length > 0 ? contacts[0] : null
 
   if (contact) {
     contactId = contact.id
