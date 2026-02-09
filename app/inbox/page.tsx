@@ -127,39 +127,12 @@ export default function InboxPage() {
 
   const fetchConversations = async () => {
     try {
-      // Join with contacts
-      const { data, error } = await supabase
-        .from('conversations')
-        .select(`
-          id,
-          created_at,
-          updated_at,
-          last_message,
-          last_message_at,
-          unread_count,
-          workspace_id,
-          contact_id,
-          contacts (
-            id,
-            name,
-            phone,
-            avatar_url
-          )
-        `)
-        .order('last_message_at', { ascending: false })
-
-      if (error) throw error
-
-      const formatted = data.map((c: any) => ({
-        id: c.id,
-        contact_name: c.contacts?.name,
-        contact_phone: c.contacts?.phone,
-        avatar_url: c.contacts?.avatar_url,
-        last_message: c.last_message,
-        last_message_at: c.last_message_at || c.created_at,
-        unread_count: c.unread_count || 0,
-        workspace_id: c.workspace_id
-      }))
+      // Use API route to bypass RLS issues and missing columns
+      const res = await fetch('/api/inbox/list')
+      if (!res.ok) throw new Error('Failed to fetch conversations')
+      const { conversations: formatted, error } = await res.json()
+      
+      if (error) throw new Error(error)
 
       setConversations(formatted)
       if (formatted.length > 0 && !workspaceId) {
