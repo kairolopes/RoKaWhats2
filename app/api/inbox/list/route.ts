@@ -26,7 +26,7 @@ export async function GET() {
           id,
           name,
           phone,
-          avatar_url
+          profile_pic_url
         )
       `)
       .order('last_message_at', { ascending: false })
@@ -56,7 +56,7 @@ export async function GET() {
             id: c.id,
             contact_name: c.contacts?.name,
             contact_phone: c.contacts?.phone,
-            avatar_url: c.contacts?.avatar_url,
+            avatar_url: c.contacts?.profile_pic_url,
             last_message: lastMsgContent, // Now populated correctly
             last_message_at: c.last_message_at || c.created_at,
             unread_count: c.unread_count || 0,
