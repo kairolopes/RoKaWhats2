@@ -132,6 +132,19 @@ export async function POST(req: Request) {
           externalMessageId
         })
         
+        // DEBUG: Log the result of persistence to verify what happened
+        await logWebhook({
+            workspaceId,
+            route: '/api/inbox/webhook/debug',
+            status: result.error ? 'persistence_failed' : 'persistence_success',
+            error: result.error || null,
+            payload: { 
+                result, 
+                env_key_check: process.env.SUPABASE_SERVICE_ROLE_KEY ? 'Present' : 'Missing',
+                params: { phone, text, externalMessageId }
+            },
+        })
+
         if (result.error) {
            console.error('Persistence failed:', result.error)
            // We don't fail the webhook response, just log

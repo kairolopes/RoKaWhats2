@@ -35,25 +35,24 @@ async function traceLast() {
     console.log("\n📡 No Webhook Logs found.");
   }
 
-  // 3. Check for specific External ID
-  const extId = 'AC2610518B5A17A7350C55450395BE45';
-  console.log(`\n🔎 Searching for External ID: ${extId}`);
-  const { data: extMsg, error: extError } = await supabase
-    .from('messages')
-    .select('*')
-    .eq('external_message_id', extId)
-    .maybeSingle();
+  // 3. Check for specific Content
+const contentSearch = 'tudo joia';
+console.log(`\n🔎 Searching for Content: "${contentSearch}"`);
+const { data: contentMsg, error: contentError } = await supabase
+  .from('messages')
+  .select('*')
+  .ilike('content', `%${contentSearch}%`)
+  .maybeSingle();
 
-  if (extError) console.error("Error searching external ID:", extError);
-  else if (extMsg) {
-    console.log(`   ✅ FOUND Message!`);
-    console.log(`   ID: ${extMsg.id}`);
-    console.log(`   Created At: ${extMsg.created_at}`);
-    console.log(`   Content: ${extMsg.content}`);
-    console.log(`   Conversation ID: ${extMsg.conversation_id}`);
-  } else {
-    console.log(`   ❌ Message NOT FOUND in DB.`);
-  }
+if (contentError) console.error("Error searching content:", contentError);
+else if (contentMsg) {
+  console.log(`   ✅ FOUND Message by Content!`);
+  console.log(`   ID: ${contentMsg.id}`);
+  console.log(`   Created At: ${contentMsg.created_at}`);
+  console.log(`   External ID: ${contentMsg.external_message_id}`);
+} else {
+  console.log(`   ❌ Message NOT FOUND by Content.`);
+}
 
   // 2. Last Message
   const { data: msgs, error: msgError } = await supabase
