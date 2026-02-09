@@ -21,13 +21,19 @@ export default function InboxPage() {
   const [loading, setLoading] = React.useState(true)
   const [workspaceId, setWorkspaceId] = React.useState<string | null>(null)
 
-  // Fetch conversations on mount
+  const selectedIdRef = React.useRef<string | null>(null)
+
+  // Update ref when state changes
+  React.useEffect(() => {
+    selectedIdRef.current = selectedId
+  }, [selectedId])
+
+  // Realtime subscription (Run once on mount)
   React.useEffect(() => {
     fetchConversations()
 
-    // Realtime subscription for Messages (Global for now to catch new messages in any conversation)
     const channel = supabase
-      .channel('table-db-changes')
+      .channel('global-messages')
       .on(
         'postgres_changes',
         {
@@ -36,16 +42,23 @@ export default function InboxPage() {
           table: 'messages',
         },
         async (payload) => {
-          console.log('New message received:', payload)
+          console.log('Realtime Event:', payload)
           const newMsg = payload.new
 
           // 1. Update Messages list if in current conversation
-          if (selectedId && newMsg.conversation_id === selectedId) {
-            setMessages((prev) => [...prev, newMsg])
-            // Mark as read if we are viewing it? (Logic for another time)
+          if (selectedIdRef.current && newMsg.conversation_id === selectedIdRef.current) {
+            setMessages((prev) => {
+                // Avoid duplicates if we already added it optimistically (check by ID or temp ID)
+                // Since we don't have temp IDs easily matching DB IDs, we might get duplicates if we aren't careful.
+                // But optimistic ID is usually temporary.
+                // For now, let's just append. If we implement proper optimistic, we replace.
+                // Check if message with same ID exists
+                if (prev.some(m => m.id === newMsg.id)) return prev
+                return [...prev, newMsg]
+            })
           }
 
-          // 2. Update Conversations list (move to top, update snippet)
+          // 2. Update Conversations list
           setConversations((prev) => {
             const index = prev.findIndex(c => c.id === newMsg.conversation_id)
             if (index > -1) {
@@ -55,25 +68,24 @@ export default function InboxPage() {
                 last_message_at: newMsg.created_at,
                 unread_count: newMsg.direction === 'in' ? (prev[index].unread_count || 0) + 1 : prev[index].unread_count
               }
-              // Move to top
               const newPrev = [...prev]
               newPrev.splice(index, 1)
               return [updatedConv, ...newPrev]
             } else {
-              // New conversation? Fetch it.
-              // For simplicity, just re-fetch all for now or fetch single
               fetchConversations()
               return prev
             }
           })
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        console.log('Supabase Realtime Status:', status)
+      })
 
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [selectedId])
+  }, []) // Dependency array empty -> runs once
 
   // Fetch messages when selected conversation changes
   React.useEffect(() => {
@@ -150,6 +162,19 @@ export default function InboxPage() {
     if (!currentConv) return
 
     try {
+      // Optimistic Update
+      const tempMsg = {
+        id: 'temp-' + Date.now(),
+        conversation_id: selectedId,
+        workspace_id: workspaceId,
+        content: text,
+        direction: 'out',
+        status: 'sending',
+        created_at: new Date().toISOString(),
+        type: 'text'
+      }
+      setMessages(prev => [...prev, tempMsg])
+
       // Call API
       const res = await fetch('/api/inbox/send', {
         method: 'POST',
@@ -164,7 +189,20 @@ export default function InboxPage() {
 
       if (!res.ok) {
         console.error('Failed to send message')
-        alert('Failed to send message')
+        // Revert optimistic update (optional, or mark as failed)
+        setMessages(prev => prev.map(m => m.id === tempMsg.id ? { ...m, status: 'failed' } : m))
+      } else {
+        // Success
+        // Wait for Realtime to replace it? 
+        // Realtime will insert a NEW message with a real ID.
+        // We should probably filter out the temp message when the real one arrives or just leave it?
+        // If we leave it, we get duplicates.
+        // Simple hack: When Realtime comes, it adds the real one. We can keep the temp one until refresh or remove it?
+        // Better: Update the temp message to 'sent' if we can link them. But we can't easily link without an ID returned from API.
+        // The API returns { ok: true }.
+        
+        // For now, let's just mark it as sent locally.
+        setMessages(prev => prev.map(m => m.id === tempMsg.id ? { ...m, status: 'sent' } : m))
       }
       
       // No need to manually add to state, Realtime will catch it

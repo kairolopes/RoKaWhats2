@@ -3,7 +3,7 @@
 import * as React from "react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
-import { Check, CheckCheck } from "lucide-react"
+import { Check, CheckCheck, Clock } from "lucide-react"
 
 interface Message {
   id: string
@@ -67,6 +67,7 @@ export function MessageList({ messages }: MessageListProps) {
                     "text-[14px]",
                     msg.status === 'read' ? "text-blue-500" : "text-gray-400"
                 )}>
+                  {msg.status === 'sending' && <Clock className="h-3 w-3" />}
                   {msg.status === 'sent' && <Check className="h-3 w-3" />}
                   {(msg.status === 'delivered' || msg.status === 'read') && <CheckCheck className="h-3 w-3" />}
                 </span>
