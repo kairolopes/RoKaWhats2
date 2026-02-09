@@ -1,47 +1,49 @@
-const url = "https://hook.us1.make.com/nqk42vgm1he55a73f9pk7dviq66mm31d";
-const secret = "f3d6c8b55b820c1b2a0d5ee8f4e7a3d9859b6cfa1e2345b7c9d0ab12cd34ef56";
 
-async function testMake() {
-  console.log('Sending test request to Make:', url);
+// const fetch = require('node-fetch');
+
+async function testMakeDirect() {
+  const makeUrl = process.env.MAKE_WEBHOOK_URL;
+  if (!makeUrl) {
+      console.error("❌ Missing MAKE_WEBHOOK_URL");
+      process.exit(1);
+  }
   
-  // Constructing the CORRECT nested body that matches Make's expectation
-  // Based on memory: { workspaceId, to: { phone }, message: { type, text } }
-  const body = {
-    workspaceId: 'TEST_WORKSPACE_ID',
+  const payload = {
+    workspaceId: '6228cbce-c983-43c1-b2e8-f2dd647dc0ff',
     to: {
-      phone: '5511999999999'
+      phone: '5562985635204'
     },
     message: {
       type: 'text',
-      text: 'Teste de envio direto (Trae Script) - ' + new Date().toISOString()
+      text: 'Teste Direto para o Make (Bypassing Backend) - Se chegar, o problema é no Render.'
     }
   };
 
-  console.log('Payload:', JSON.stringify(body, null, 2));
+  console.log('🚀 Sending DIRECT request to Make:', makeUrl);
+  console.log('📦 Payload:', JSON.stringify(payload, null, 2));
 
   try {
-    const res = await fetch(url, {
+    const response = await fetch(makeUrl, {
       method: 'POST',
       headers: {
-        'content-type': 'application/json',
-        'x-make-secret': secret || ''
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify(body)
+      body: JSON.stringify(payload)
     });
 
-    const text = await res.text();
-    console.log(`Status: ${res.status}`);
-    console.log(`Response: ${text}`);
+    console.log('📡 Status Code:', response.status);
+    const text = await response.text();
+    console.log('📄 Response Body:', text);
 
-    if (res.status >= 400) {
-      console.error('Make returned an error. Check scenario configuration.');
+    if (response.ok) {
+        console.log('✅ Make accepted the request. Check your phone!');
     } else {
-      console.log('Make accepted the request.');
+        console.log('❌ Make rejected the request.');
     }
 
-  } catch (e) {
-    console.error('Fetch error:', e);
+  } catch (error) {
+    console.error('❌ Network Error:', error);
   }
 }
 
-testMake();
+testMakeDirect();
