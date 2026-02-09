@@ -118,29 +118,40 @@ export async function POST(req: Request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY as string
     )
     
-    const result = await persistMessage(supabase, {
-      workspaceId,
-      phone,
-      contactName,
-      contactAvatar,
-      text: text || '',
-      mediaUrl,
-      type,
-      direction: 'in',
-      status: 'delivered', // Changed from 'received' to 'delivered' to match DB constraints
-      externalMessageId
-    })
-    
-    if (result.error) {
-       console.error('Persistence failed:', result.error)
-       // We don't fail the webhook response, just log
-       await logWebhook({
-        workspaceId,
-        route: '/api/inbox/webhook',
-        status: 'persistence_failed',
-        error: result.error,
-        payload: body,
-      })
+    try {
+        const result = await persistMessage(supabase, {
+          workspaceId,
+          phone,
+          contactName,
+          contactAvatar,
+          text: text || '',
+          mediaUrl,
+          type,
+          direction: 'in',
+          status: 'delivered', // Changed from 'received' to 'delivered' to match DB constraints
+          externalMessageId
+        })
+        
+        if (result.error) {
+           console.error('Persistence failed:', result.error)
+           // We don't fail the webhook response, just log
+           await logWebhook({
+            workspaceId,
+            route: '/api/inbox/webhook',
+            status: 'persistence_failed',
+            error: result.error,
+            payload: body,
+          })
+        }
+    } catch (err: any) {
+        console.error('Persistence crashed:', err)
+        await logWebhook({
+            workspaceId,
+            route: '/api/inbox/webhook',
+            status: 'persistence_crashed',
+            error: err.message || String(err),
+            payload: body,
+        })
     }
   }
   
