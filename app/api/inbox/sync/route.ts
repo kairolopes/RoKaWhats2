@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { logWebhook } from '../../../../lib/logger'
+import { logWebhook } from '@/lib/logger'
 
 export async function POST(req: Request) {
   const body = await req.json()

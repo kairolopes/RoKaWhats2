@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { logWebhook } from '../../../../lib/logger'
-import { persistMessage } from '../../../../lib/inbox'
+import { logWebhook } from '@/lib/logger'
+import { persistMessage } from '@/lib/inbox'
 import { createClient } from '@supabase/supabase-js'
 
 export async function POST(req: Request) {

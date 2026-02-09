@@ -1,8 +1,8 @@
 
 import { NextResponse } from 'next/server'
-import { logWebhook } from '../../../../lib/logger'
+import { logWebhook } from '@/lib/logger'
 import { createClient } from '@supabase/supabase-js'
-import { persistMessage } from '../../../../lib/inbox'
+import { persistMessage } from '@/lib/inbox'
 
 export async function POST(req: Request) {
   const secret = req.headers.get('x-make-secret')

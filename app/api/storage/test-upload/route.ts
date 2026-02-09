@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { ensureBuckets, uploadToSupabaseStorage } from '../../../../lib/storage'
+import { ensureBuckets, uploadToSupabaseStorage } from '@/lib/storage'
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}))

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { getProfileByUserId } from '../../../lib/profile'
-import { getUserIdFromToken } from 'lib/auth'
+import { getProfileByUserId } from '@/lib/profile'
+import { getUserIdFromToken } from '@/lib/auth'
 
 export async function GET(req: Request) {
   const auth = req.headers.get('authorization') || ''

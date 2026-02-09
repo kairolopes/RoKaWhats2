@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { logWebhook } from '../../../../../lib/logger'
-import { ensureBuckets, uploadToSupabaseStorage } from '../../../../../lib/storage'
+import { logWebhook } from '@/lib/logger'
+import { ensureBuckets, uploadToSupabaseStorage } from '@/lib/storage'
 import { createClient } from '@supabase/supabase-js'
 
 // Removed fs usage to avoid potential build issues in Next.js App Router

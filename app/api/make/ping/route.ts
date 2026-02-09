@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { makePing } from '../../../../lib/make'
-import { logWebhook } from '../../../../lib/logger'
+import { makePing } from '@/lib/make'
+import { logWebhook } from '@/lib/logger'
 
 export async function GET() {
   const token =
