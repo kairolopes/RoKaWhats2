@@ -25,6 +25,7 @@ export async function POST(req: Request) {
   }
   const workspaceId = body?.workspaceId as string | undefined
   const externalMessageId = body?.externalMessageId as string | undefined
+  const phone = body?.phone as string | undefined
 
   if (!externalMessageId) {
     await logWebhook({
@@ -78,7 +79,12 @@ export async function POST(req: Request) {
   }
 
   // --- PERSIST TO MESSAGES TABLE ---
-  if (workspaceId && body.message?.text && phone) {
+  const messageData = body?.message || {}
+  const type = messageData.type || 'text'
+  const text = messageData.text || messageData.caption
+  const mediaUrl = messageData.image || messageData.audio || messageData.video || messageData.document || messageData.mediaUrl
+
+  if (workspaceId && (text || mediaUrl) && phone) {
     // Note: Z-API Inbound format might differ from Outbox format.
     // We expect 'phone' (sender) to be present.
     
@@ -91,7 +97,9 @@ export async function POST(req: Request) {
     const result = await persistMessage(supabase, {
       workspaceId,
       phone,
-      text: body.message.text,
+      text: text || '',
+      mediaUrl,
+      type,
       direction: 'in',
       status: 'received',
       externalMessageId

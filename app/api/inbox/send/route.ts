@@ -7,11 +7,14 @@ export async function POST(req: Request) {
   const body = await req.json()
   const workspaceId = body?.workspaceId as string | undefined
   const phone = body?.to?.phone as string | undefined
-  const text = body?.message?.text as string | undefined
+  const messageData = body?.message || {}
+  const type = messageData.type || 'text'
+  const text = messageData.text || messageData.caption // Use caption as text if present
+  const mediaUrl = messageData.image || messageData.audio || messageData.video || messageData.document
   const externalMessageId = body?.externalMessageId as string | undefined
 
   // Persist Outbound Message
-  if (workspaceId && phone && text) {
+  if (workspaceId && phone && (text || mediaUrl)) {
      const supabase = createClient(
       process.env.SUPABASE_URL as string,
       process.env.SUPABASE_SERVICE_ROLE_KEY as string
@@ -20,7 +23,9 @@ export async function POST(req: Request) {
     await persistMessage(supabase, {
       workspaceId,
       phone,
-      text,
+      text: text || '',
+      mediaUrl,
+      type,
       direction: 'out',
       status: 'sent',
       externalMessageId

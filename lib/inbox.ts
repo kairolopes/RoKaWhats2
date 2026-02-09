@@ -7,6 +7,8 @@ export async function persistMessage(s: SupabaseClient, params: {
   text: string
   direction: 'in' | 'out'
   status: string
+  type?: string
+  mediaUrl?: string
   externalMessageId?: string
 }) {
   // 1. Get or Create Contact
@@ -71,14 +73,21 @@ export async function persistMessage(s: SupabaseClient, params: {
   }
 
   // 3. Insert Message
+  // Handle media: if mediaUrl exists, we prepend/append it to content or store it if we had a column.
+  // Since we don't have a media_url column, we'll store it in content: "URL \n CAPTION"
+  let finalContent = params.text || ''
+  if (params.mediaUrl) {
+    finalContent = params.text ? `${params.mediaUrl}\n${params.text}` : params.mediaUrl
+  }
+
   const { data: msg, error: msgErr } = await s
     .from('messages')
     .insert({
       workspace_id: params.workspaceId,
       conversation_id: conversationId,
-      content: params.text,
+      content: finalContent,
       direction: params.direction,
-      type: 'text',
+      type: params.type || 'text',
       status: params.status,
       external_message_id: params.externalMessageId,
     })
